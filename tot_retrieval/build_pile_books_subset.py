@@ -19,7 +19,8 @@ from datasets import load_dataset, concatenate_datasets, DatasetDict
 from tqdm import tqdm
 
 # ------------ CONFIGURATION ------------
-OUTPUT_DIR = "/data/the_pile_books_subset"  # change this path if needed
+OUTPUT_DIR = os.path.expanduser("~/the_pile_books_subset")
+  # change this path if needed
 SUBSETS = ["BookCorpus2", "Books3", "Gutenberg", "Wikipedia", "Pile-CC"]
 STREAMING_MODE = True        # Set False if you want to fully download (needs ~180GB)
 SAVE_INTERVAL = 1_000_000    # Save every million records if streaming
