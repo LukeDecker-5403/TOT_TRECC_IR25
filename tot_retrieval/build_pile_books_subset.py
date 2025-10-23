@@ -24,6 +24,13 @@ OUTPUT_DIR = os.path.expanduser("~/the_pile_books_subset")
 SUBSETS = ["BookCorpus2", "Books3", "Gutenberg", "Wikipedia", "Pile-CC"]
 STREAMING_MODE = True        # Set False if you want to fully download (needs ~180GB)
 SAVE_INTERVAL = 1_000_000    # Save every million records if streaming
+DATASET_MAP = {
+    "BookCorpus2": "bookcorpusopen",
+    "Books3": "Skylion007/books3",
+    "Gutenberg": "Skylion007/books3",  # Or another public text source
+    "Wikipedia": "wikipedia",
+    "Pile-CC": "cc_news"
+}
 # ---------------------------------------
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -32,7 +39,8 @@ def get_subset(name):
     """Load one subset of The Pile, streaming if requested."""
     print(f"\n=== Loading subset: {name} ===")
     try:
-        ds = load_dataset("EleutherAI/the_pile", name, split="train", streaming=STREAMING_MODE)
+        dataset_name = DATASET_MAP[name]
+        ds = load_dataset(dataset_name, name, split="train", streaming=STREAMING_MODE)
         print(f"Loaded subset: {name}")
         return ds
     except Exception as e:
