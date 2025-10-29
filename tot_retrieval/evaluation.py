@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Tuple, Optional
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 import seaborn as sns
-from .ensemble_retriever import EnsembleRetriever, RetrievalResult
+from .ensemble_retriever_pyserini import PyseriniEnsembleRetriever, RetrievalResult
 from .query_decomposer import QueryDecomposer
 
 @dataclass
@@ -25,7 +25,7 @@ class EvaluationMetrics:
 class TOTEvaluator:
     """Evaluator for TOT Retrieval system"""
     
-    def __init__(self, ensemble_retriever: EnsembleRetriever, 
+    def __init__(self, ensemble_retriever: PyseriniEnsembleRetriever, 
                  query_decomposer: QueryDecomposer):
         """
         Initialize evaluator
