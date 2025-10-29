@@ -1,13 +1,21 @@
 """
-Ensemble Retriever for TOT Retrieval System
-Combines multiple field-specific retrievers with learned weights
+Lucene-based Ensemble Retriever using Pyserini
+Much faster and more scalable than pure Python BM25
 """
 
-import numpy as np
+import json
+import os
+import tempfile
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from collections import defaultdict
-import math
+import numpy as np
+from pathlib import Path
+
+# Pyserini imports
+from pyserini.index.lucene import IndexReader, LuceneIndexer
+from pyserini.search.lucene import LuceneSearcher
+
 from .config import Config
 
 @dataclass
@@ -18,136 +26,143 @@ class RetrievalResult:
     field_scores: Dict[str, float]
     metadata: Dict[str, Any]
 
-class BM25Retriever:
-    """BM25 retriever for a single field"""
+class LuceneFieldRetriever:
+    """Lucene-based retriever for a single field"""
     
-    def __init__(self, field_name: str, k1: float = 1.5, b: float = 0.75):
+    def __init__(self, field_name: str, index_dir: str):
         """
-        Initialize BM25 retriever
+        Initialize Lucene field retriever
         
         Args:
-            field_name: Name of the field to index
-            k1: BM25 k1 parameter
-            b: BM25 b parameter
+            field_name: Name of the field to search
+            index_dir: Directory containing the Lucene index
         """
         self.field_name = field_name
-        self.k1 = k1
-        self.b = b
-        self.documents = {}
-        self.doc_lengths = {}
-        self.avg_doc_length = 0
-        self.idf_scores = {}
-        self.vocab = set()
-    
+        self.index_dir = index_dir
+        self.field_index_dir = os.path.join(index_dir, f"{field_name}_index")
+        self.searcher = None
+        
     def build_index(self, documents: List[Dict[str, Any]]):
-        """Build BM25 index from documents"""
-        self.documents = {}
-        doc_freq = defaultdict(int)
-        total_length = 0
-        
-        for doc in documents:
-            doc_id = doc['doc_id']
-            field_value = doc.get(self.field_name, '')
-            
-            # Tokenize (simple whitespace tokenization)
-            tokens = self._tokenize(field_value)
-            self.documents[doc_id] = tokens
-            self.doc_lengths[doc_id] = len(tokens)
-            total_length += len(tokens)
-            
-            # Count document frequencies
-            unique_tokens = set(tokens)
-            for token in unique_tokens:
-                doc_freq[token] += 1
-            
-            self.vocab.update(tokens)
-        
-        # Calculate average document length
-        self.avg_doc_length = total_length / len(documents) if documents else 0
-        
-        # Calculate IDF scores
-        num_docs = len(documents)
-        for term, df in doc_freq.items():
-            idf = math.log((num_docs - df + 0.5) / (df + 0.5) + 1)
-            self.idf_scores[term] = idf
-    
-    def retrieve(self, query: str) -> Dict[str, float]:
         """
-        Retrieve documents for query
+        Build Lucene index for this field
+        
+        Args:
+            documents: List of documents
+        """
+        print(f"Building Lucene index for field: {self.field_name}")
+        
+        # Create temporary directory for documents
+        temp_dir = tempfile.mkdtemp()
+        json_dir = os.path.join(temp_dir, "documents")
+        os.makedirs(json_dir, exist_ok=True)
+        
+        # Convert documents to Pyserini JSON format
+        for i, doc in enumerate(documents):
+            doc_id = doc['doc_id']
+            field_content = doc.get(self.field_name, '')
+            
+            # Skip empty fields
+            if not field_content or field_content == "N/A":
+                field_content = " "  # Lucene needs some content
+            
+            # Create JSON document
+            json_doc = {
+                'id': doc_id,
+                'contents': field_content,
+                'metadata': json.dumps(doc)  # Store full document as metadata
+            }
+            
+            # Write to file
+            with open(os.path.join(json_dir, f'doc_{i}.json'), 'w') as f:
+                json.dump(json_doc, f)
+        
+        # Build Lucene index
+        os.makedirs(self.field_index_dir, exist_ok=True)
+        
+        # Use Pyserini's indexer
+        indexer = LuceneIndexer(self.field_index_dir)
+        
+        # Index all JSON files
+        for filename in os.listdir(json_dir):
+            filepath = os.path.join(json_dir, filename)
+            with open(filepath, 'r') as f:
+                doc_json = json.load(f)
+                indexer.add_doc_dict(doc_json)
+        
+        indexer.close()
+        
+        # Initialize searcher
+        self.searcher = LuceneSearcher(self.field_index_dir)
+        self.searcher.set_bm25(k1=Config.BM25_K1, b=Config.BM25_B)
+        
+        # Clean up temp files
+        import shutil
+        shutil.rmtree(temp_dir)
+        
+        print(f"  Index built: {self.field_index_dir}")
+    
+    def retrieve(self, query: str, k: int = 1000) -> Dict[str, float]:
+        """
+        Retrieve documents for query using Lucene
         
         Args:
             query: Query string
+            k: Number of results to retrieve
             
         Returns:
-            Dictionary mapping doc_id to BM25 score
+            Dictionary mapping doc_id to score
         """
-        query_tokens = self._tokenize(query)
-        scores = {}
+        if not self.searcher:
+            self.searcher = LuceneSearcher(self.field_index_dir)
+            self.searcher.set_bm25(k1=Config.BM25_K1, b=Config.BM25_B)
         
-        if not query_tokens:
+        if not query or query == "N/A":
+            return {}
+        
+        try:
+            # Search using Lucene
+            hits = self.searcher.search(query, k=k)
+            
+            # Convert to score dictionary
+            scores = {}
+            for hit in hits:
+                scores[hit.docid] = hit.score
+            
             return scores
         
-        for doc_id, doc_tokens in self.documents.items():
-            score = self._calculate_bm25(query_tokens, doc_tokens, doc_id)
-            scores[doc_id] = score
-        
-        return scores
-    
-    def _calculate_bm25(self, query_tokens: List[str], 
-                       doc_tokens: List[str], doc_id: str) -> float:
-        """Calculate BM25 score for a document"""
-        score = 0.0
-        doc_length = self.doc_lengths[doc_id]
-        
-        # Count term frequencies in document
-        doc_term_freq = defaultdict(int)
-        for token in doc_tokens:
-            doc_term_freq[token] += 1
-        
-        for term in query_tokens:
-            if term not in doc_term_freq:
-                continue
-            
-            tf = doc_term_freq[term]
-            idf = self.idf_scores.get(term, 0)
-            
-            # BM25 formula
-            numerator = tf * (self.k1 + 1)
-            denominator = tf + self.k1 * (1 - self.b + self.b * (doc_length / self.avg_doc_length))
-            
-            score += idf * (numerator / denominator)
-        
-        return score
-    
-    def _tokenize(self, text: str) -> List[str]:
-        """Simple tokenization (lowercase and split)"""
-        if not text or text == "N/A":
-            return []
-        return text.lower().split()
+        except Exception as e:
+            print(f"Error searching field {self.field_name}: {e}")
+            return {}
 
-class EnsembleRetriever:
-    """Ensemble retriever combining multiple field-specific retrievers"""
+class PyseriniEnsembleRetriever:
+    """Ensemble retriever using Lucene/Pyserini"""
     
-    def __init__(self, weights: Optional[Dict[str, float]] = None):
+    def __init__(self, index_dir: str = "./lucene_indices", 
+                 weights: Optional[Dict[str, float]] = None):
         """
-        Initialize ensemble retriever
+        Initialize Pyserini ensemble retriever
         
         Args:
+            index_dir: Directory to store Lucene indices
             weights: Optional custom weights for each field
         """
+        self.index_dir = index_dir
         self.weights = weights or Config.DEFAULT_WEIGHTS.copy()
         self.retrievers = {}
         self.documents = []
         self.doc_metadata = {}
+        
+        # Create index directory
+        os.makedirs(self.index_dir, exist_ok=True)
     
     def build_index(self, documents: List[Dict[str, Any]]):
         """
-        Build indices for all fields
+        Build Lucene indices for all fields
         
         Args:
             documents: List of documents with all fields
         """
-        print(f"Building indices for {len(documents)} documents...")
+        print(f"Building Lucene indices for {len(documents)} documents...")
         self.documents = documents
         
         # Store metadata
@@ -158,17 +173,35 @@ class EnsembleRetriever:
         fields = ['plot', 'title', 'author', 'genre', 'date', 'cover']
         
         for field in fields:
-            print(f"  Building {field} index...")
-            retriever = BM25Retriever(field, k1=Config.BM25_K1, b=Config.BM25_B)
+            print(f"\n=== Building index for field: {field} ===")
+            retriever = LuceneFieldRetriever(field, self.index_dir)
             retriever.build_index(documents)
             self.retrievers[field] = retriever
         
-        print("Index building complete!")
+        print("\n✅ All Lucene indices built successfully!")
+    
+    def load_index(self):
+        """Load existing Lucene indices"""
+        print("Loading existing Lucene indices...")
+        
+        fields = ['plot', 'title', 'author', 'genre', 'date', 'cover']
+        
+        for field in fields:
+            field_index_dir = os.path.join(self.index_dir, f"{field}_index")
+            
+            if os.path.exists(field_index_dir):
+                retriever = LuceneFieldRetriever(field, self.index_dir)
+                retriever.searcher = LuceneSearcher(field_index_dir)
+                retriever.searcher.set_bm25(k1=Config.BM25_K1, b=Config.BM25_B)
+                self.retrievers[field] = retriever
+                print(f"  Loaded {field} index")
+            else:
+                print(f"  Warning: {field} index not found at {field_index_dir}")
     
     def retrieve(self, decomposed_query: Dict[str, str], 
                 top_k: int = 10) -> List[RetrievalResult]:
         """
-        Retrieve documents using ensemble approach
+        Retrieve documents using ensemble approach with Lucene
         
         Args:
             decomposed_query: Dictionary with field-specific queries
@@ -182,7 +215,8 @@ class EnsembleRetriever:
         
         for field, query in decomposed_query.items():
             if field in self.retrievers and query and query != "N/A":
-                field_scores = self.retrievers[field].retrieve(query)
+                print(f"  Searching {field}: '{query[:50]}...'")
+                field_scores = self.retrievers[field].retrieve(query, k=1000)
                 all_field_scores[field] = self._normalize_scores(field_scores)
             else:
                 all_field_scores[field] = {}
@@ -256,12 +290,12 @@ class EnsembleRetriever:
                         metric: str = "recall@5",
                         n_trials: int = 50) -> Dict[str, float]:
         """
-        Optimize retriever weights using grid search
+        Optimize retriever weights using validation data
         
         Args:
             val_queries: List of decomposed validation queries
             val_labels: Ground truth document IDs
-            metric: Metric to optimize (recall@5, mrr, etc.)
+            metric: Metric to optimize
             n_trials: Number of random trials
             
         Returns:
@@ -272,7 +306,6 @@ class EnsembleRetriever:
         best_weights = self.weights.copy()
         best_score = 0.0
         
-        # Try different weight combinations
         for trial in range(n_trials):
             # Generate random weights
             weights = self._generate_random_weights()
@@ -294,7 +327,7 @@ class EnsembleRetriever:
         
         # Set best weights
         self.weights = best_weights
-        print(f"Optimization complete! Best {metric} = {best_score:.4f}")
+        print(f"✅ Optimization complete! Best {metric} = {best_score:.4f}")
         print(f"Optimized weights: {best_weights}")
         
         return best_weights
@@ -342,13 +375,19 @@ class EnsembleRetriever:
         stats = {
             'num_documents': len(self.documents),
             'weights': self.weights,
+            'index_dir': self.index_dir,
             'retrievers': {}
         }
         
-        for field, retriever in self.retrievers.items():
-            stats['retrievers'][field] = {
-                'vocab_size': len(retriever.vocab),
-                'avg_doc_length': retriever.avg_doc_length
-            }
+        for field in self.retrievers:
+            field_index_dir = os.path.join(self.index_dir, f"{field}_index")
+            if os.path.exists(field_index_dir):
+                stats['retrievers'][field] = {
+                    'index_path': field_index_dir,
+                    'index_exists': True
+                }
         
         return stats
+
+# Alias for backward compatibility
+EnsembleRetriever = PyseriniEnsembleRetriever
