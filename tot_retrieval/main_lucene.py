@@ -12,6 +12,9 @@ import sys
 # Handle both relative and absolute imports
 try:
     from .config import Config
+    # free for xhorxhi gui test
+    # from .query_decomposer_free import QueryDecomposer
+
     from .query_decomposer import QueryDecomposer
     from .ensemble_retriever_pyserini import PyseriniEnsembleRetriever
     from .evaluation import TOTEvaluator
