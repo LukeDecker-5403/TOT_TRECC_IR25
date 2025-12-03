@@ -5,19 +5,33 @@ Configuration module for TOT Retrieval System with Lucene/Pyserini support
 import os
 from pathlib import Path
 
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not available, will use environment variables only
+
 class Config:
     """Configuration settings for TOT Retrieval System"""
     
     # ============================================================
     # LLM Settings (Optional - only if using OpenAI decomposer)
     # ============================================================
-    LLM_MODEL = "gpt-3.5-turbo"  # or "gpt-4" for better results
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Optional
+    LLM_MODEL = "gpt-4"  # or "gpt-4" for better results
+    # Try multiple environment variable names for API key
+    # Check both uppercase and lowercase variants (common in .env files)
+    OPENAI_API_KEY = (
+        os.getenv("OPENAI_API_KEY") or 
+        os.getenv("openai_api_key") or 
+        os.getenv("openapi_api_key") or 
+        os.getenv("OPENAPI_API_KEY")
+    )
     
     # ============================================================
     # Directory Settings
     # ============================================================
-    BASE_DIR = Path(__file__).parent.parent
+    BASE_DIR = Path(__file__).parent
     DATA_DIR = BASE_DIR / "data"
     CACHE_DIR = BASE_DIR / "cache"
     RESULTS_DIR = BASE_DIR / "results"
@@ -57,14 +71,14 @@ class Config:
     LUCENE_POSITIONAL_INDEX = False
     
     # Lucene index settings
-    LUCENE_RAM_BUFFER_SIZE = 512  # MB - increase for faster indexing
+    LUCENE_RAM_BUFFER_SIZE = 2048  # MB - increase for faster indexing
     
     # ============================================================
     # Query Decomposition Settings
     # ============================================================
     # Which decomposer to use by default
     # Options: "rule_based" (free, no API), "llm" (requires OpenAI key)
-    DEFAULT_DECOMPOSER = "rule_based"
+    DEFAULT_DECOMPOSER = "llm"
     
     # Cache decomposed queries to avoid re-processing
     ENABLE_QUERY_CACHE = True
@@ -122,7 +136,7 @@ class Config:
         cls.LUCENE_INDEX_DIR.mkdir(parents=True, exist_ok=True)
         
         if cls.VERBOSE:
-            print("✅ Created/verified directories:")
+            print("Created/verified directories:")
             print(f"   Data: {cls.DATA_DIR}")
             print(f"   Cache: {cls.CACHE_DIR}")
             print(f"   Results: {cls.RESULTS_DIR}")
@@ -159,7 +173,7 @@ class Config:
             )
         
         if cls.VERBOSE:
-            print("✅ Configuration validated successfully")
+            print("Configuration validated successfully")
         
         return True
     
@@ -217,14 +231,14 @@ class Config:
             f.write(cls.get_summary())
         
         if cls.VERBOSE:
-            print(f"✅ Configuration saved to: {filepath}")
+            print(f"Configuration saved to: {filepath}")
     
     @classmethod
     def update_weights(cls, new_weights: dict):
         """Update ensemble weights"""
         cls.DEFAULT_WEIGHTS.update(new_weights)
         if cls.VERBOSE:
-            print("✅ Updated ensemble weights:")
+            print("Updated ensemble weights:")
             for field, weight in cls.DEFAULT_WEIGHTS.items():
                 print(f"   {field:8s}: {weight:.4f}")
 
@@ -234,7 +248,7 @@ class Config:
 try:
     Config.create_directories()
     if not Config._check_java():
-        print("⚠️  WARNING: Java not found. Lucene/Pyserini will not work.")
+        print("WARNING: Java not found. Lucene/Pyserini will not work.")
         print("   Install Java 11+ to use this system.")
 except Exception as e:
-    print(f"⚠️  WARNING: Configuration validation issue: {e}")
+    print(f"WARNING: Configuration validation issue: {e}")

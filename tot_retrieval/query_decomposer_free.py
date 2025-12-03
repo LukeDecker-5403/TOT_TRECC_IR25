@@ -8,6 +8,7 @@ from typing import Dict, List
 from dataclasses import dataclass
 import json
 import os
+from .config import Config
 
 @dataclass
 class DecomposedQuery:
@@ -78,7 +79,7 @@ class RuleBasedQueryDecomposer:
         
         # Cache
         self.cache = {}
-        self.cache_file = "cache/decomposed_queries_rulebased.json"
+        self.cache_file = str(Config.CACHE_DIR / "decomposed_queries_rulebased.json")
         self._load_cache()
     
     def _load_cache(self):

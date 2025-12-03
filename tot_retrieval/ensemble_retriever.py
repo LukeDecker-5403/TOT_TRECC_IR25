@@ -39,7 +39,7 @@ class EnsembleRetriever:
 
     def build_index(self, documents: List[Dict[str, Any]]):
         """Build FAISS indices for each field"""
-        print("🔧 Building FAISS indices...")
+        print("Building FAISS indices...")
         self.documents = documents
 
         for field in self.field_weights.keys():
@@ -52,7 +52,7 @@ class EnsembleRetriever:
             self.indices[field] = index
             self.embeddings[field] = emb
 
-        print("✅ All indices built!")
+        print("All indices built!")
 
     def retrieve(self, decomposed_query: Dict[str, str], top_k: int = 10) -> List[RetrievalResult]:
         """Retrieve top documents for a decomposed query"""

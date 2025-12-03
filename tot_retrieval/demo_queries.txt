@@ -1,0 +1,23 @@
+# Demo Queries for ToT Retrieval System
+
+## Sherlock Holmes
+- A detective story about a man who solves mysteries in London with his friend
+- A book with a detective who uses logic and deduction to solve crimes
+- A mystery novel set in Victorian England with a detective and his doctor friend
+- A story about a brilliant detective who lives on Baker Street
+- A classic mystery book with a detective who smokes a pipe and plays violin
+
+## Wizard of Oz
+- A children's book about a girl who gets swept away to a magical land with a yellow road
+- A story about a girl from Kansas who goes to a colorful fantasy world
+- A book with a scarecrow, tin man, and lion looking for things they think they lack
+- A classic children's story about a girl who travels to a magical place with witches
+- A story about a girl who follows a yellow brick road to meet a wizard
+
+## Dracula
+- A classic horror novel about a vampire from Transylvania
+- A gothic novel about a count who moves to England and drinks blood
+- A book about a vampire who lives in a castle and turns people into vampires
+- A horror story set in Transylvania with a vampire who can turn into a bat
+- A novel about a vampire hunter and a count who preys on young women
+
