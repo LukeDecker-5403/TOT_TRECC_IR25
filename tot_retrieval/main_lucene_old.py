@@ -46,12 +46,12 @@ class TOTRetrievalSystem:
         print("=" * 60)
         
         # Initialize query decomposer (rule-based, no API key needed)
-        print("\n📋 Initializing rule-based query decomposer...")
+        print("\nInitializing rule-based query decomposer...")
         self.query_decomposer = QueryDecomposer()
-        print("✅ Query decomposer ready (no API key needed)")
+        print("Query decomposer ready (no API key needed)")
         
         # Initialize ensemble retriever
-        print("\n🔍 Initializing Lucene-based ensemble retriever...")
+        print("\nInitializing Lucene-based ensemble retriever...")
         self.ensemble_retriever = PyseriniEnsembleRetriever(index_dir=self.index_dir)
         
         # Build or load indices
@@ -60,7 +60,7 @@ class TOTRetrievalSystem:
             print("This may take a few minutes...")
             self.ensemble_retriever.build_index(documents)
         else:
-            print("\n📂 Loading existing Lucene indices...")
+            print("\nLoading existing Lucene indices...")
             self.ensemble_retriever.load_index()
             # Still need metadata
             for doc in documents:
@@ -70,7 +70,7 @@ class TOTRetrievalSystem:
         self.evaluator = TOTEvaluator(self.ensemble_retriever, self.query_decomposer)
         
         print("\n" + "=" * 60)
-        print("✅ System setup complete!")
+        print("System setup complete!")
         print("=" * 60)
     
     def search(self, query: str, mode: str = "extractive", top_k: int = 10) -> List[Dict[str, Any]]:
@@ -89,21 +89,21 @@ class TOTRetrievalSystem:
             raise ValueError("System not set up. Call setup() first.")
         
         print("\n" + "=" * 60)
-        print(f"🔍 Processing query: '{query}'")
+        print(f"Processing query: '{query}'")
         print("=" * 60)
         
         # Decompose query
-        print("\n📋 Decomposing query...")
+        print("\nDecomposing query...")
         decomposed = self.query_decomposer.decompose(query, mode)
         decomposed_dict = decomposed.to_dict()
         
-        print("\n📝 Decomposed query:")
+        print("\nDecomposed query:")
         for field, subquery in decomposed_dict.items():
             if subquery and subquery != "N/A":
                 print(f"  • {field:8s}: {subquery}")
         
         # Retrieve documents using Lucene
-        print(f"\n🔍 Retrieving top {top_k} documents from Lucene...")
+        print(f"\nRetrieving top {top_k} documents from Lucene...")
         results = self.ensemble_retriever.retrieve(decomposed_dict, top_k)
         
         # Format results
@@ -117,7 +117,7 @@ class TOTRetrievalSystem:
             }
             formatted_results.append(formatted_result)
         
-        print(f"\n✅ Found {len(formatted_results)} results")
+        print(f"\nFound {len(formatted_results)} results")
         return formatted_results
     
     def evaluate(self, test_queries: List[str], test_labels: List[str], 
@@ -221,7 +221,7 @@ def main():
         for query in demo_queries:
             results = system.search(query, mode=args.decomposition_mode, top_k=3)
             
-            print("\n📚 Top Results:")
+            print("\nTop Results:")
             for i, result in enumerate(results, 1):
                 metadata = result['metadata']
                 print(f"\n  {i}. {metadata.get('title', 'Unknown')}")
@@ -243,7 +243,7 @@ def main():
             print("❌ Error: --data_file required for search mode")
             return
         
-        print(f"📂 Loading data from {args.data_file}...")
+        print(f"Loading data from {args.data_file}...")
         documents = system.data_loader.load_dataset(args.data_file)
         
         # Setup system (load existing index if available)
@@ -252,7 +252,7 @@ def main():
         # Search
         results = system.search(args.query, mode=args.decomposition_mode, top_k=10)
         
-        print("\n📚 Search Results:")
+        print("\nSearch Results:")
         for i, result in enumerate(results, 1):
             metadata = result['metadata']
             print(f"\n{i}. {metadata.get('title', 'Unknown')} "
@@ -265,7 +265,7 @@ def main():
             print("❌ Error: --data_file required for evaluation mode")
             return
         
-        print(f"📂 Loading data from {args.data_file}...")
+        print(f"Loading data from {args.data_file}...")
         documents = system.data_loader.load_dataset(args.data_file)
         
         # Setup system
@@ -276,7 +276,7 @@ def main():
         if os.path.exists(test_queries_file):
             test_queries, test_labels = system.data_loader.load_queries_and_labels(test_queries_file)
         else:
-            print(f"⚠️  Test queries file not found: {test_queries_file}")
+            print(f"Warning: Test queries file not found: {test_queries_file}")
             print("Creating sample queries from documents...")
             query_data = system.data_loader.create_sample_queries(documents, num_queries=10)
             test_queries = [q['query'] for q in query_data]
@@ -292,7 +292,7 @@ def main():
             print("❌ Error: --data_file required for optimization mode")
             return
         
-        print(f"📂 Loading data from {args.data_file}...")
+        print(f"Loading data from {args.data_file}...")
         documents = system.data_loader.load_dataset(args.data_file)
         
         # Setup system
@@ -303,7 +303,7 @@ def main():
         if os.path.exists(val_queries_file):
             val_queries, val_labels = system.data_loader.load_queries_and_labels(val_queries_file)
         else:
-            print(f"⚠️  Validation queries file not found: {val_queries_file}")
+            print(f"Warning: Validation queries file not found: {val_queries_file}")
             print("Creating sample queries from documents...")
             query_data = system.data_loader.create_sample_queries(documents, num_queries=10)
             val_queries = [q['query'] for q in query_data]

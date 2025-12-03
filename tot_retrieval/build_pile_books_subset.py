@@ -60,7 +60,7 @@ def save_streaming_dataset(ds, subset_name, out_dir):
             if count % SAVE_INTERVAL == 0:
                 f.flush()
                 print(f"Saved {count:,} examples from {subset_name}...")
-    print(f"✅ Finished saving {subset_name}: {count:,} examples to {subset_path}")
+    print(f"Finished saving {subset_name}: {count:,} examples to {subset_path}")
 
 def main():
     print("🚀 Starting The Pile book/text subset build...")
@@ -86,7 +86,7 @@ def main():
         print("Merging all subsets into one HuggingFace dataset...")
         combined = concatenate_datasets(all_datasets)
         combined.save_to_disk(os.path.join(OUTPUT_DIR, "combined_books_subset"))
-        print("✅ All subsets merged and saved successfully!")
+        print("All subsets merged and saved successfully!")
 
     print("\n🎉 Done! Your The Pile book subset is ready at:")
     print(f"   {OUTPUT_DIR}")

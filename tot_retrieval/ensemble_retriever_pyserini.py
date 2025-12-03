@@ -178,7 +178,7 @@ class PyseriniEnsembleRetriever:
             retriever.build_index(documents)
             self.retrievers[field] = retriever
         
-        print("\n✅ All Lucene indices built successfully!")
+        print("\nAll Lucene indices built successfully!")
     
     def load_index(self):
         """Load existing Lucene indices"""
@@ -197,6 +197,71 @@ class PyseriniEnsembleRetriever:
                 print(f"  Loaded {field} index")
             else:
                 print(f"  Warning: {field} index not found at {field_index_dir}")
+    
+    def load_metadata_from_index(self):
+        """
+        Load metadata from indexed documents.
+        Note: Metadata may not be stored in the index by default.
+        This method attempts to extract it, but if it fails, metadata
+        should be loaded from the data file instead.
+        """
+        if not self.retrievers:
+            return
+        
+        # Use any available index to extract metadata
+        # All indices should have the same metadata stored
+        first_field = list(self.retrievers.keys())[0] if self.retrievers else None
+        if not first_field:
+            return
+        
+        retriever = self.retrievers[first_field]
+        if not retriever.searcher:
+            return
+        
+        try:
+            # Get index reader to access stored fields
+            from pyserini.index.lucene import IndexReader
+            index_reader = IndexReader(retriever.field_index_dir)
+            stats = index_reader.stats()
+            num_docs = stats.get('documents', 0)
+            
+            if num_docs == 0:
+                return
+            
+            print(f"  Attempting to extract metadata from {num_docs} indexed documents...")
+            
+            # Try to extract metadata - note that metadata may not be stored
+            # in retrievable format by pyserini's default indexing
+            extracted = 0
+            for i in range(min(num_docs, 1000)):  # Check first 1000 documents
+                try:
+                    doc_id = f"doc_{i}"
+                    doc = index_reader.doc(doc_id)
+                    if doc is None:
+                        continue
+                    
+                    # Try to get metadata field
+                    metadata_str = doc.get('metadata')
+                    if metadata_str:
+                        try:
+                            import json
+                            metadata = json.loads(metadata_str)
+                            actual_doc_id = doc.id()
+                            self.doc_metadata[actual_doc_id] = metadata
+                            extracted += 1
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                except Exception:
+                    continue
+            
+            if extracted == 0:
+                        print(f"  Warning: Metadata not stored in index format (this is normal)")
+                        print(f"     To get full metadata, provide --data_file when searching")
+            else:
+                        print(f"  Extracted metadata for {extracted} documents")
+        except Exception as e:
+            print(f"  Warning: Could not extract metadata from index: {e}")
+            print(f"     To get full metadata, provide --data_file when searching")
     
     def retrieve(self, decomposed_query: Dict[str, str], 
                 top_k: int = 10) -> List[RetrievalResult]:
@@ -236,6 +301,76 @@ class PyseriniEnsembleRetriever:
                 doc_id=doc_id,
                 score=score_info['score'],
                 field_scores=score_info['field_scores'],
+                metadata=self.doc_metadata.get(doc_id, {})
+            )
+            results.append(result)
+        
+        return results
+    
+    def retrieve_all(self, max_docs: int = 1000) -> List[RetrievalResult]:
+        """
+        Retrieve all documents (for constraint-only queries)
+        
+        Args:
+            max_docs: Maximum number of documents to retrieve
+            
+        Returns:
+            List of RetrievalResult objects with uniform scores
+        """
+        from pyserini.index.lucene import IndexReader
+        
+        # Get all document IDs from the index
+        all_doc_ids = set()
+        
+        # Use the first available retriever to access the index
+        for field, retriever in self.retrievers.items():
+            if retriever.searcher or os.path.exists(retriever.field_index_dir):
+                try:
+                    # Use IndexReader to get all document IDs
+                    index_reader = IndexReader(retriever.field_index_dir)
+                    stats = index_reader.stats()
+                    total_docs = min(stats.get('documents', 0), max_docs)
+                    
+                    # Get all document IDs by iterating through the index
+                    for i in range(total_docs):
+                        try:
+                            docid = f"doc_{i}"  # Assuming doc IDs are in this format
+                            doc = index_reader.doc(docid)
+                            if doc:
+                                all_doc_ids.add(docid)
+                        except:
+                            # Try alternative docid format
+                            try:
+                                docids = index_reader.docids()
+                                if i < len(docids):
+                                    all_doc_ids.add(docids[i])
+                            except:
+                                pass
+                    break  # Got what we need from one index
+                except Exception as e:
+                    # Fallback: use a very broad query
+                    if retriever.searcher:
+                        try:
+                            # Try searching with a common word
+                            hits = retriever.searcher.search("the", k=max_docs * 2)
+                            for hit in hits:
+                                all_doc_ids.add(hit.docid)
+                            if all_doc_ids:
+                                break
+                        except:
+                            pass
+        
+        # If we still don't have documents, try loading from metadata
+        if not all_doc_ids and self.doc_metadata:
+            all_doc_ids = set(self.doc_metadata.keys())[:max_docs]
+        
+        # Create results with uniform scores
+        results = []
+        for doc_id in list(all_doc_ids)[:max_docs]:
+            result = RetrievalResult(
+                doc_id=doc_id,
+                score=1.0,  # Uniform score for constraint-only queries
+                field_scores={},
                 metadata=self.doc_metadata.get(doc_id, {})
             )
             results.append(result)

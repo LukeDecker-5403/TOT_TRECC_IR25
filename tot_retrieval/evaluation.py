@@ -10,7 +10,13 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 import seaborn as sns
 from .ensemble_retriever_pyserini import PyseriniEnsembleRetriever, RetrievalResult
-from .query_decomposer import QueryDecomposer
+from .config import Config
+
+# Import decomposer based on config
+if Config.DEFAULT_DECOMPOSER == "rule_based":
+    from .query_decomposer_free import RuleBasedQueryDecomposer as QueryDecomposer
+else:
+    from .query_decomposer import QueryDecomposer
 
 @dataclass
 class EvaluationMetrics:
