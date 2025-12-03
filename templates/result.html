@@ -8,22 +8,52 @@
 <body class="bg-gray-100 min-h-screen p-8">
 
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">
-            Results for: <span class="text-blue-600">{{ query }}</span>
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">
+            Results for: <span class="text-blue-600 text-lg">{{ query }}</span>
         </h1>
+        
+        {% if decomposed_breakdown %}
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3">Decomposed query:</h2>
+                <div class="space-y-1">
+                    {% for field, subquery in decomposed_breakdown.items() %}
+                        <div class="text-sm text-gray-700">
+                            <span class="font-mono font-semibold text-gray-600 inline-block w-20">{{ field }}</span>: {{ subquery }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
 
         {% if results %}
-            <div class="space-y-6">
+            <div class="space-y-4">
                 {% for r in results %}
                     <div class="p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition">
-                        <h2 class="text-2xl font-semibold text-gray-900">{{ r.metadata.title }}</h2>
-                        <p class="text-gray-600 text-sm mb-2">By {{ r.metadata.author }}</p>
-
-                        <p class="text-gray-700 mt-2"><strong>Plot:</strong> {{ r.metadata.plot }}</p>
-
-                        <p class="mt-3 text-sm text-gray-500">
-                            <strong>Score:</strong> {{ r.score }}
+                        <h2 class="text-xl font-semibold text-gray-900 mb-1">
+                            {{ r.metadata.title if r.metadata and r.metadata.title else 'Unknown' }}
+                        </h2>
+                        <p class="text-gray-600 text-sm mb-3">
+                            By {{ r.metadata.author if r.metadata and r.metadata.author else 'Unknown' }}
                         </p>
+
+                        <div class="text-sm text-gray-500 mb-2">
+                            <strong>Doc ID:</strong> {{ r.doc_id }}
+                        </div>
+
+                        <div class="text-sm text-gray-600 mb-2">
+                            <strong>Score:</strong> <span class="font-mono">{{ "%.4f"|format(r.score) }}</span>
+                        </div>
+
+                        {% if r.top_fields %}
+                            <div class="text-sm text-gray-600 mt-2">
+                                <strong>Top fields:</strong> 
+                                <span class="font-mono">
+                                    {% for field, score in r.top_fields %}
+                                        {{ field }}({{ "%.2f"|format(score) }}){% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
+                            </div>
+                        {% endif %}
                     </div>
                 {% endfor %}
             </div>
