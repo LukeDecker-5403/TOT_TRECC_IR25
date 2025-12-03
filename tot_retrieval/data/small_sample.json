@@ -1,0 +1,23 @@
+[
+  {
+    "id": "1",
+    "title": "The Cat Story",
+    "author": "John Example",
+    "plot": "A cat goes on an adventure across the city.",
+    "text": "Once upon a time, a curious cat explored the entire town..."
+  },
+  {
+    "id": "2",
+    "title": "Space Journey",
+    "author": "Alice Stars",
+    "plot": "Astronauts discover a new planet full of mysteries.",
+    "text": "The astronauts stepped onto the strange glowing surface..."
+  },
+  {
+    "id": "3",
+    "title": "Mystery in the Forest",
+    "author": "Leo Woods",
+    "plot": "A detective investigates unusual events in a forest.",
+    "text": "Deep in the forest, something was watching silently..."
+  }
+]
