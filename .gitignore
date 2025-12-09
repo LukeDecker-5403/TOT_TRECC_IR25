@@ -1,5 +1,6 @@
 # Large data files
 tot_retrieval/data/gutenberg_subset.json
+tot_retrieval/gutenberg_data/gutenberg_subset.json
 
 # Python
 __pycache__/

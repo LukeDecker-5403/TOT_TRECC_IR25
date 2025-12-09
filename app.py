@@ -24,7 +24,8 @@ documents = loader.load_dataset(str(Config.BASE_DIR / "gutenberg_data" / "gutenb
 # ---------------------------------------------------------------------------
 
 system = TOTRetrievalSystem()
-system.setup(documents, rebuild_index=False)   # <-- set to True on first run
+# Build index on first run (takes a few minutes), then set to False for faster startup
+system.setup(documents, rebuild_index=True)   # <-- set to False after first run
 
 # ---------------------------
 # Routes

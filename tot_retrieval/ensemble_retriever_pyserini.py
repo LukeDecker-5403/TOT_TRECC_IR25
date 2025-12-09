@@ -185,6 +185,7 @@ class PyseriniEnsembleRetriever:
         print("Loading existing Lucene indices...")
         
         fields = ['plot', 'title', 'author', 'genre', 'date', 'cover']
+        loaded_count = 0
         
         for field in fields:
             field_index_dir = os.path.join(self.index_dir, f"{field}_index")
@@ -195,8 +196,14 @@ class PyseriniEnsembleRetriever:
                 retriever.searcher.set_bm25(k1=Config.BM25_K1, b=Config.BM25_B)
                 self.retrievers[field] = retriever
                 print(f"  Loaded {field} index")
+                loaded_count += 1
             else:
                 print(f"  Warning: {field} index not found at {field_index_dir}")
+        
+        if loaded_count == 0:
+            print("\n❌ ERROR: No indices found! Cannot perform searches.")
+            print("   Please set rebuild_index=True to build indices first.")
+            raise RuntimeError("No Lucene indices found. Set rebuild_index=True to build indices.")
     
     def load_metadata_from_index(self):
         """
