@@ -13,7 +13,7 @@ import numpy as np
 from pathlib import Path
 
 # Pyserini imports
-from pyserini.index.lucene import IndexReader, LuceneIndexer
+from pyserini.index.lucene import LuceneIndexReader, LuceneIndexer
 from pyserini.search.lucene import LuceneSearcher
 
 from .config import Config
@@ -220,8 +220,8 @@ class PyseriniEnsembleRetriever:
         
         try:
             # Get index reader to access stored fields
-            from pyserini.index.lucene import IndexReader
-            index_reader = IndexReader(retriever.field_index_dir)
+            from pyserini.index.lucene import LuceneIndexReader
+            index_reader = LuceneIndexReader(retriever.field_index_dir)
             stats = index_reader.stats()
             num_docs = stats.get('documents', 0)
             
@@ -317,7 +317,7 @@ class PyseriniEnsembleRetriever:
         Returns:
             List of RetrievalResult objects with uniform scores
         """
-        from pyserini.index.lucene import IndexReader
+        from pyserini.index.lucene import LuceneIndexReader
         
         # Get all document IDs from the index
         all_doc_ids = set()
@@ -326,8 +326,8 @@ class PyseriniEnsembleRetriever:
         for field, retriever in self.retrievers.items():
             if retriever.searcher or os.path.exists(retriever.field_index_dir):
                 try:
-                    # Use IndexReader to get all document IDs
-                    index_reader = IndexReader(retriever.field_index_dir)
+                    # Use LuceneIndexReader to get all document IDs
+                    index_reader = LuceneIndexReader(retriever.field_index_dir)
                     stats = index_reader.stats()
                     total_docs = min(stats.get('documents', 0), max_docs)
                     
