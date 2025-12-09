@@ -346,7 +346,7 @@ def main():
                        default=None, help="Operation mode (defaults to 'search' if --query provided)")
     parser.add_argument("--query", type=str, help="Query to search (if provided, defaults mode to 'search')")
     parser.add_argument("--data_file", type=str, default=None,
-                       help="Data file to load (defaults to tot_retrieval/gutenberg_data/gutenberg_subset.json if it exists)")
+                       help="Data file to load (defaults to data/gutenberg_subset.json if it exists)")
     parser.add_argument("--index_dir", type=str, default=None,
                        help=f"Directory for Lucene indices (defaults to {Config.LUCENE_INDEX_DIR})")
     parser.add_argument("--rebuild_index", action="store_true",
@@ -370,7 +370,7 @@ def main():
         print("🎭 Running demo with Gutenberg dataset...")
 
         # Full path to Gutenberg dataset
-        gutenberg_file = str(Config.BASE_DIR / "gutenberg_data" / "gutenberg_subset.json")
+        gutenberg_file = str(Config.DATA_DIR / "gutenberg_subset.json")
 
         # Load Gutenberg dataset
         print(f"Loading Gutenberg dataset from {gutenberg_file}...")
@@ -419,7 +419,7 @@ def main():
         
         # Default to Gutenberg dataset if no data file specified
         if not args.data_file:
-            default_data_file = str(Config.BASE_DIR / "gutenberg_data" / "gutenberg_subset.json")
+            default_data_file = str(Config.DATA_DIR / "gutenberg_subset.json")
             if os.path.exists(default_data_file):
                 args.data_file = default_data_file
                 print(f"Using default data file: {default_data_file}")

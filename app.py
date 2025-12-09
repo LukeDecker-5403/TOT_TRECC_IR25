@@ -10,7 +10,7 @@ app = Flask(__name__)
 # ---------------------------
 
 loader = DataLoader(Config.DATA_DIR)
-documents = loader.load_dataset(str(Config.BASE_DIR / "gutenberg_data" / "gutenberg_subset.json"))
+documents = loader.load_dataset(str(Config.DATA_DIR / "gutenberg_subset.json"))
 
 # ---------------------------------------------------------------------------
 # INDEX BUILD INSTRUCTIONS

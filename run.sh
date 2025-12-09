@@ -62,7 +62,7 @@ echo ""
 
 # Check for dataset
 echo "✓ Checking dataset..."
-DATASET_PATH="tot_retrieval/gutenberg_data/gutenberg_subset.json"
+DATASET_PATH="data/gutenberg_subset.json"
 if [ ! -f "$DATASET_PATH" ]; then
     echo "❌ Error: Dataset not found at $DATASET_PATH"
     echo "   Please ensure the Gutenberg dataset is available"
@@ -78,7 +78,7 @@ REQUIRED_FIELDS=("plot" "title" "author" "genre" "date" "cover")
 MISSING_INDICES=()
 
 for field in "${REQUIRED_FIELDS[@]}"; do
-    INDEX_DIR="tot_retrieval/lucene_indices/${field}_index"
+    INDEX_DIR="lucene_indices/${field}_index"
     if [ ! -d "$INDEX_DIR" ]; then
         MISSING_INDICES+=("$field")
     fi

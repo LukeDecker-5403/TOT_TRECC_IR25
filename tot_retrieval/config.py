@@ -31,7 +31,7 @@ class Config:
     # ============================================================
     # Directory Settings
     # ============================================================
-    BASE_DIR = Path(__file__).parent
+    BASE_DIR = Path(__file__).parent.parent  # Project root directory
     DATA_DIR = BASE_DIR / "data"
     CACHE_DIR = BASE_DIR / "cache"
     RESULTS_DIR = BASE_DIR / "results"

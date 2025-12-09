@@ -5,7 +5,7 @@ Home Repository for TOT Project IR25
 
 ## Quick Start
 
-1. **Download the pre-formatted Gutenberg dataset attached on canvas** (`gutenberg_subset.json`) and place it in `tot_retrieval/gutenberg_data/`
+1. **Download the pre-formatted Gutenberg dataset attached on canvas** (`gutenberg_subset.json`) and place it in `data/`
 
 2. **Set your OpenAI API key:**
    ```bash
